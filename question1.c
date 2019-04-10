@@ -1,4 +1,6 @@
-//Neel Agarwal 
+/*Ques. 1. Considering 4 processes with the arrival time and the burst time requirement of the processes the scheduler schedules the processes by interrupting the processor after every 3 units of time and does consider the completion of the process in this iteration. The schedulers then checks for the number of processes waiting for the processor and allots the processor to the process but interrupting the processor after every 6 units of time and considers the completion of the process in this iteration. The scheduler after the second iteration checks for the number of processes waiting for the processor and now provides the processor to the process with the least time requirement to go in the terminated state.
+The inputs for the number of requirements, arrival time and burst time should be provided by the user.
+*/
 
 #include<stdio.h>
 #include<conio.h>
@@ -10,27 +12,26 @@
 int indexOf(int value, int arr[]);
 int findSum(int arr[]);
 int min(int arr[]);
-int min2(int arr1[],int arr2[]);
 int main()
 {
-	int i,p,l,j,k,t,temp_q,x;// loop iterators and temporary variable
-	int a,b;// for tracking time indices
+	int i,p,l,j,k,t,temp_q,a,b;// loop iterators and temporary variable
 	int pID[4];
+	int tq; //time quantum
 	int burst_time[4];
-	int tq; // time quantum
 	int rbt[4];//remaining burst time
 	int arrival_time[4];
 	int gantt_chart[50];
 	int time_index[50];
 	int ready_queue[50];
 	int sum_burst;//to store the total of burst times of all processes
-	int size_TI,size_RQ;//to store respective sizes of time index and ready queue
+	int size_TI,size_GC;//to store respective sizes of time index and gantt chart
 	int wt[4];//to store the respective waiting time of all processes
 	int tat[4];//to store the respective turn around time of all processes
 	double avg_wt,avg_tat;
+	int flag2;//tracker for completion of first iteration and to put processIds of second iteration in another array
+	int second_ite[50];//the other array
+	int x;//loop iterators
 	
-	int arrived_process[50];//array for searching minimum rbt
-	int min_value;
 	for(i=0;i<4;i++)
 	{
 		pID[i] = i;
@@ -67,7 +68,11 @@ int main()
 	temp_q=0;
 	a=0;
 	b=0;
-	tq = 3;//for first iteration the time quantum is kept 3
+	
+	flag2=0;
+	x=0;//counter for second_ite[] 
+	
+	tq=3;//initially time quantum has to be 3
 	a = min(at);
 	gc[0] = rq[0] = indexOf(a,at);
 	time_index[0]=a;
@@ -78,10 +83,6 @@ int main()
 		gc[j] = p;
 		temp_q = -1;
 		
-		if(j==1)//second iteration
-		{
-			tq = 6;
-		}
 		if(rbt[p]>=tq)
 		{
 			b = a+tq;
@@ -121,6 +122,12 @@ int main()
 			{
 				i++;
 				rq[i] = l;
+				if(flag2==1)//means if this is the second iteration
+				{
+					second_ite[x] = rq[i];
+					x++;
+				}
+				
 			}
 		}//end of loop
 		if(temp_q>=0)//to add to end of ready queue, refer to #1 
@@ -128,84 +135,43 @@ int main()
 			i++;
 			rq[i]= temp_q;
 		}
+		if(b>=max(at))//condition for end of 1st iteration
+		{
+			tq=6;
+			flag2=1;
+		}
 		
 		time_index[t+1] = b;
 		a=b;
 		t+=1;
 		j+=1;
 		
-		//code to break from loop
-		if(j==2)//as soon as third iteration is entered
+		int check = checkSecond(second_ite);
+		if(check == 1)
 		{
+			t = j+1;
 			break;
-		}
-	}//end of while loop for round robin type scheduling
-	
-	i=2;//all the ready queue formed by round robin is discarded after 0 and 1th positions
-	x=0;
-	for(l=0;l<4;l++){
-	if(at[l]<=b) 
-	{
-		arrived_process[x] = l;
-		x++;
-	}}//end of loop
-	min_value = min2(rbt,arrived_process);
-	rq[i] = indexOf(min_value,rbt);
-	
-	//loop for Preamptive SJF
-	while(1) //break from loop when time_index equals sum of all burst times
-	{
-		p = rq[j];
-		gc[j] = p;
+		}//i.e. if second iteration is over break from the loop of round robin
+		//at this point the gantt chart is ready till j-1 position
+		//so we drop the ready queue in between i and current position of j
 		
-		if(rbt[p]>=1)
-		{
-			b = a+1;
-			rbt[p]-= 1;
-		}
-		x = 0;
-		for(l=0;l<4;l++)//l is a counter to traverse the process id or index
-		{ 
-			int flag = 0;
-			for(k=0;k<=i;k++)
-			{
-				if(l == rq[k])
-				{
-					flag=1;
-				}
-			}
-			if(flag==1)
-			{
-				continue;
-			}
-			
-			//to include all processes arrived by time b in the ready queue
-			if(at[l]<=b)
-			{
-				arrived_process[x] = l;
-				x++;
-			}//all the indices of arrived processes by b time will be in the array
-		}//end of for loop
-		//for updating the ready queue
-		++i;
-		min_value = min2(rbt,arrived_process);
-		rq[i] = indexOf(min_value,rbt); // return the index of minimum value of rbt among the arrived processes
-		
-		time_index[t+1] = b;
-		a=b;
-		t+=1;
-		j+=1;
-		
-		//code to break from loop
-		if(b == sum_burst)
-		{
-			size_RQ = i;
-			size_TI = i+1;
-			break;
-		}
 	}//end of while loop
-    
-    
+	while(1)//loop for non - preamptive SJF
+	{
+		p = indexOf(min2(rbt),rbt);
+		gc[j] = p;//updating gantt chart with id of minimum burst time 
+		time_index[t] = time_index[t-1] + min2(rbt);
+		rbt[p] = 0;//updating remaining burst time
+		t+=1;
+		j+=1;//updating counters
+		if(time_index[t-1] == sum_burst)//code to break from loop
+		{
+			size_GC = sizeof(gc)/sizeof(int);
+			size_TI = size_GC+1;
+			break;
+		}
+	}
+	
     //calculating the waiting time and turn around time
     for(i=0;i<4;i++)//i is used here as the process ID
     {
@@ -213,7 +179,7 @@ int main()
     	//wt[i]=0;
     	//tat[i]=0;
     	int flag=0;//tracker for first occurence of process ID in gantt chart
-    	for(j=0;j<=size_RQ;j++)
+    	for(j=0;j<size_GC;j++)
     	{
     		if(i == gc[j] && flag==0)
     		{
@@ -245,20 +211,20 @@ int main()
 	
 	printf("\nAverage Turn Around Time: %f\n",avg_tat);
 	
-	/*printf("\nReady Queue:\n");
-	for(i=0;i<=size_RQ;i++) 
+	printf("\nGantt Chart:\n");
+	for(i=0;i<size_GC;i++) //check again
 	{
 		printf("%d ",rq[i]);
 	}
 	
 	printf("\nTime indices:\n");
-	for(i=0;i<=size_TI;i++)
+	for(i=0;i<size_TI;i++)
 	{
 		printf("%d ",time_index[i]);	
-	}*/
+	}
 	
 }//end of main()
-int min(int arr[])//function to find minimum element in arrival time
+int min(int arr[])//function to find minimum element in any array
 {
 	int m_value = arr[0];
 	int j;
@@ -271,21 +237,40 @@ int min(int arr[])//function to find minimum element in arrival time
 	}
 	return m_value;
 }
-int min2(int arr1[],int arr2[])//function to find minimum element in arr1 but only from indices present in arr2
+int min2(int arr[])//function to find minimum element in rbt except for 0
 {
-	int i=arr2[0];
-	
-	int m_value = arr1[i];
-	int j;
-	int d;
-	for(j=1;j<(sizeof(arr2)/sizeof(int));j++)
+	int n;
+	int m_value;
+	for(n=0;n<4;n++)
+	{
+		if(arr[n]!=0)
 		{
-			d = arr2[j];
-			if(arr1[d]<m_value)
-			{
-				m_value = arr1[d];
-			}
-		}//end of loop
+			m_value=arr[n];
+			break;
+		}
+	}//just to initiallise m_value with first non-zero element 
+	
+	int j;
+	for(j=0;j<4;j++)
+	{
+		if(arr[j]<m_value && arr[j]!=0)
+		{
+			m_value = arr[j];
+		}
+	}
+	return m_value;
+}
+int max(int arr[])//function to find maximum element in any array
+{
+	int m_value = arr[0];
+	int j;
+	for(j=1;j<4;j++)
+	{
+		if(arr[j]>m_value)
+		{
+			m_value = arr[j];
+		}
+	}
 	return m_value;
 }
 
@@ -311,5 +296,31 @@ int findSum(int arr[])// function to find sum of elements of an array
 	}
 	//printf("%d\t",sum);
 	return sum;
+}
+int checkSecond(int arr[])//function that checks if second iteration is over
+{
+	int q,i;
+	int f[4];//tracker
+	for(q=0;q<4;q++)
+	{
+		point:
+		f[q] = 0;
+		for(i=0;i<(sizeof(arr)/sizeof(int));i++)
+		{
+			if(arr[i] == q)
+			{
+				f[q]=1;
+				goto point;		
+			}	
+		}
+	}
+	if(f[0]==1 && f[1]==1 && f[2]==1 && f[3]==1 )
+	{
+		return 1;
+	}
+	else
+	{
+		return 0;
+	}
 }
 
