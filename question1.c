@@ -1,9 +1,13 @@
-/*Ques. 1. Considering 4 processes with the arrival time and the burst time requirement of the processes the scheduler schedules the processes by interrupting the processor after every 3 units of time and does consider the completion of the process in this iteration. The schedulers then checks for the number of processes waiting for the processor and allots the processor to the process but interrupting the processor after every 6 units of time and considers the completion of the process in this iteration. The scheduler after the second iteration checks for the number of processes waiting for the processor and now provides the processor to the process with the least time requirement to go in the terminated state.
+/*Ques. 1. Considering 4 processes with the arrival time and the burst time requirement of the processes the scheduler 
+schedules the processes by interrupting the processor after every 3 units of time and does consider the completion of the 
+process in this iteration. The schedulers then checks for the number of processes waiting for the processor and allots the 
+processor to the process but interrupting the processor after every 6 units of time and considers the completion of the
+ process in this iteration. The scheduler after the second iteration checks for the number of processes waiting for the 
+ processor and now provides the processor to the process with the least time requirement to go in the terminated state.
 The inputs for the number of requirements, arrival time and burst time should be provided by the user.
 */
-
 #include<stdio.h>
-#include<conio.h>
+//#include<conio.h>
 #include<unistd.h>
 #define at arrival_time
 #define bt burst_time
@@ -12,6 +16,9 @@ The inputs for the number of requirements, arrival time and burst time should be
 int indexOf(int value, int arr[]);
 int findSum(int arr[]);
 int min(int arr[]);
+int max(int arr[]);
+int min2(int arr[]);
+int checkSecond(int arr[],int len);
 int main()
 {
 	int i,p,l,j,k,t,temp_q,a,b;// loop iterators and temporary variable
@@ -20,16 +27,16 @@ int main()
 	int burst_time[4];
 	int rbt[4];//remaining burst time
 	int arrival_time[4];
-	int gantt_chart[50];
-	int time_index[50];
-	int ready_queue[50];
+	int gantt_chart[150];
+	int time_index[150];
+	int ready_queue[150];
 	int sum_burst;//to store the total of burst times of all processes
 	int size_TI,size_GC;//to store respective sizes of time index and gantt chart
 	int wt[4];//to store the respective waiting time of all processes
 	int tat[4];//to store the respective turn around time of all processes
 	double avg_wt,avg_tat;
 	int flag2;//tracker for completion of first iteration and to put processIds of second iteration in another array
-	int second_ite[50];//the other array
+	int second_ite[100];//the other array
 	int x;//loop iterators
 	
 	for(i=0;i<4;i++)
@@ -58,14 +65,15 @@ int main()
 	}
 	
 	//task of input over
-	sum_burst = findSum(bt);
+	
+	sum_burst = findSum(bt);//to the find the total of all burst times in order to set the boundary
 	//printf("\n%d",sum_burst);
 	
 	i=0;//counter for ready queue update
 	p=0;//to refer to current position of traversal in ready queue
 	j=0;//counter for gantt chart
 	t=0;//counter for time index
-	temp_q=0;
+	temp_q=0; //temporary variable when the process still left with burst time has to wait for others to get added to queue
 	a=0;
 	b=0;
 	
@@ -77,11 +85,17 @@ int main()
 	gc[0] = rq[0] = indexOf(a,at);
 	time_index[0]=a;
 	
-	while(1) //break from loop when time_index equals sum of all burst times
+	while(1) //break from loop when condition for second iteration is also over
 	{
 		p = rq[j];
 		gc[j] = p;
 		temp_q = -1;
+		
+		if(!(p>=0&&p<=3))//to avoid the occurrence of segmentation fault
+		{
+			t=j+1;
+			break;
+		}
 		
 		if(rbt[p]>=tq)
 		{
@@ -146,7 +160,7 @@ int main()
 		t+=1;
 		j+=1;
 		
-		int check = checkSecond(second_ite);
+		int check = checkSecond(second_ite,x);
 		if(check == 1)
 		{
 			t = j+1;
@@ -158,18 +172,21 @@ int main()
 	}//end of while loop
 	while(1)//loop for non - preamptive SJF
 	{
-		p = indexOf(min2(rbt),rbt);
+		
+		if(time_index[t-1] == sum_burst)//code to break from loop
+		{
+			size_GC = j;
+			size_TI = t;
+			break;
+		}
+		
+		p = indexOf(min2(rbt),rbt);//min2 is to calculate min burst time non-zero
 		gc[j] = p;//updating gantt chart with id of minimum burst time 
 		time_index[t] = time_index[t-1] + min2(rbt);
 		rbt[p] = 0;//updating remaining burst time
 		t+=1;
 		j+=1;//updating counters
-		if(time_index[t-1] == sum_burst)//code to break from loop
-		{
-			size_GC = sizeof(gc)/sizeof(int);
-			size_TI = size_GC+1;
-			break;
-		}
+		
 	}
 	
     //calculating the waiting time and turn around time
@@ -188,7 +205,7 @@ int main()
     			flag = 1;
     			continue;
 			}
-			if(i == gc[j])//if second or further occurence
+			if(i == gc[j] && flag==1)//if second or further occurence
 			{
 				wt[i] = wt[i] + (time_index[j] - temp);
 				temp = time_index[j+1];
@@ -214,7 +231,7 @@ int main()
 	printf("\nGantt Chart:\n");
 	for(i=0;i<size_GC;i++) //check again
 	{
-		printf("%d ",rq[i]);
+		printf("%d ",gc[i]);
 	}
 	
 	printf("\nTime indices:\n");
@@ -251,7 +268,7 @@ int min2(int arr[])//function to find minimum element in rbt except for 0
 	}//just to initiallise m_value with first non-zero element 
 	
 	int j;
-	for(j=0;j<4;j++)
+	for(j=n;j<4;j++)
 	{
 		if(arr[j]<m_value && arr[j]!=0)
 		{
@@ -297,24 +314,20 @@ int findSum(int arr[])// function to find sum of elements of an array
 	//printf("%d\t",sum);
 	return sum;
 }
-int checkSecond(int arr[])//function that checks if second iteration is over
+int checkSecond(int arr[],int len)//function that checks if second iteration is over
 {
-	int q,i;
-	int f[4];//tracker
-	for(q=0;q<4;q++)
+	int a,b,c,d;
+	a=b=c=d=0;
+	
+	int i;
+	for(i=0;i<len;i++)
 	{
-		point:
-		f[q] = 0;
-		for(i=0;i<(sizeof(arr)/sizeof(int));i++)
-		{
-			if(arr[i] == q)
-			{
-				f[q]=1;
-				goto point;		
-			}	
-		}
+		if(arr[i]==0)a++;
+		if(arr[i]==1)b++;
+		if(arr[i]==2)c++;
+		if(arr[i]==3)d++;
 	}
-	if(f[0]==1 && f[1]==1 && f[2]==1 && f[3]==1 )
+	if(a!=0 && b!=0 && c!=0 && d!=0)
 	{
 		return 1;
 	}
